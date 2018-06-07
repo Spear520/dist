@@ -155,7 +155,6 @@ double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12]
 	double sqrDistance = (-x0 + x6*s + x9*t + x3*u)*(-x0 + x6*s + x9*t + x3*u) +
 		(-x1 + x7*s + x10*t + x4*u)*(-x1 + x7*s + x10*t + x4*u) +
 		(-x2 + x8*s + x11*t + x5*u)*(-x2 + x8*s + x11*t + x5*u);
-	double dist = sqrt(sqrDistance);
 
 	// u = zeta1; s = zeta2; t = zeta3;
 	double s2[12][12], t2[12][12], det2[12][12];
@@ -179,6 +178,7 @@ double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12]
 		t1[i] = ((a*e - b*d)*det1[i]) / detsq + ((d*b1[i] + b*d1[i]) - (a*e1[i] + e*a1[i])) / det;
 		u1[i] = -(s1[i] + t1[i]);
 
+		// expression is machine-generated
 		fd[i] = -2 * (x0 - x6*s - x9*t - x3*u)*
 			(x6*s1[i] + x9*t1[i] + x3*u1[i] - xd(0, i) + u*xd(3, i) +
 				s*xd(6, i) + t*xd(9, i)) -
