@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <iostream>
 
+// helper functions; dont' call them directly
 
 // POINT-LINE
 //  dot product of the form (p1-p0)(p2-p1)
 double sp_dot3(double(&x)[9],	// input: coords of p0,p1,p2
-	double(&fd)[9],				// output: first derivatives; must be cleared
+	double(&fd)[9],				// output: first derivatives; must be cleared before calling this function
 	double(&sd)[9][9])			// output: second derivatives; must be cleared
 {
 	double x0 = x[0];
@@ -149,7 +150,6 @@ double vertex_edge_distance_and_derivs(double(&x)[9],	// input coords; p0, line:
 	double(&sdd)[9],				// output: first derivatives
 	double(&sdd2)[9][9]) {		// output: second derivatives
 
-								// determine t, i.e. pc = p1(1-t)+p2(t)
 	double x0 = x[0];
 	double x1 = x[1];
 	double x2 = x[2];
@@ -161,6 +161,7 @@ double vertex_edge_distance_and_derivs(double(&x)[9],	// input coords; p0, line:
 	double x8 = x[8];
 
 	double edge_length_sq = (-x3 + x6)*(-x3 + x6) + (-x4 + x7)*(-x4 + x7) + (-x5 + x8)*(-x5 + x8);
+	// pc = p1(1-t)+p2(t)
 	double t = -((-x0 + x3)*(-x3 + x6) + (-x1 + x4)*(-x4 + x7) +
 		(-x2 + x5)*(-x5 + x8)) / edge_length_sq;
 
@@ -172,57 +173,40 @@ double vertex_edge_distance_and_derivs(double(&x)[9],	// input coords; p0, line:
 	double dist = sqrt(sqrDist);
 	double ratio = sqrDist / edge_length;
 
+	double g;
+	double g_fd[9] = {};
+	double g_sd[9][9] = {};
 
-	/*
-//	if (t < 0.01 && ratio < 0.001) {
-		if (false) {
-			// approximation 
-		double fd_[9] = { 2 * (x0 - u*x3 - t*x6),2 * (x1 - u*x4 - t*x7),2 * (x2 - u*x5 - t*x8),-2 * u*(x0 - u*x3 - t*x6),-2 * u*(x1 - u*x4 - t*x7),-2 * u*(x2 - u*x5 - t*x8),-2 * t*(x0 - u*x3 - t*x6),-2 * t*(x1 - u*x4 - t*x7),-2 * t*(x2 - u*x5 - t*x8) };
-		double sd_[9][9] = { { 2,0,0,-2 * u,0,0,-2 * t,0,0 },{ 0,2,0,0,-2 * u,0,0,-2 * t,0 },{ 0,0,2,0,0,-2 * u,0,0,-2 * t },{ -2 * u,0,0,2 * (u*u),0,0,2 * t*u,0,0 },{ 0,-2 * u,0,0,2 * (u*u),0,0,2 * t*u,0 },{ 0,0,-2 * u,0,0,2 * (u*u),0,0,2 * t*u },{ -2 * t,0,0,2 * t*u,0,0,2 * (t*t),0,0 },{ 0,-2 * t,0,0,2 * t*u,0,0,2 * (t*t),0 },{ 0,0,-2 * t,0,0,2 * t*u,0,0,2 * (t*t) } };
+	// |(x1-x0)(x2-x1)|^2 and its derivatives
+	g = sp_dot3_squared(x, g_fd, g_sd);
 
-		for (int i = 0; i < 9; i++) {
-			sdd[i] = fd_[i];
-			for (int j = 0; j < 9; j++) {
-				sdd2[i][j] = sd_[i][j];
-			}
+	// f1 = |x1-x0|^2
+	double f1;
+	double f1fd[9] = {};
+	double f1sd[9][9] = {};
+	f1 = vertex_vertex_distance_and_derivs(1, 0, x, f1fd, f1sd);
+
+	// f2 = |x2-x1|^2
+	double f2;
+	double f2fd[9] = {};
+	double f2sd[9][9] = {};
+	f2 = vertex_vertex_distance_and_derivs(2, 1, x, f2fd, f2sd);
+
+	// combine together
+	double f2sq = f2*f2;
+	double f2cube = f2sq*f2;
+	for (int i = 0; i < 9; i++) {
+		sdd[i] = f1fd[i] + (g*f2fd[i] - f2*g_fd[i]) / f2sq;
+
+		for (int j = 0; j < 9; j++) {
+			double term1 = -2 * g*f2fd[i] * f2fd[j] / f2cube;
+			double term2 = (g_fd[i] * f2fd[j] + g_fd[j] * f2fd[i]) / f2sq;
+			double term3 = f1sd[i][j];
+			double term4 = g*f2sd[i][j] / f2sq;
+			double term5 = -g_sd[i][j] / f2;
+			sdd2[i][j] = term1 + term2 + term3 + term4 + term5;
 		}
 	}
-	*/
-
-		double g;
-		double g_fd[9] = {};
-		double g_sd[9][9] = {};
-
-		// |(x1-x0)(x2-x1)|^2 and its derivatives
-		g = sp_dot3_squared(x, g_fd, g_sd);
-
-		// f1 = |x1-x0|^2
-		double f1;
-		double f1fd[9] = {};
-		double f1sd[9][9] = {};
-		f1 = vertex_vertex_distance_and_derivs(1, 0, x, f1fd, f1sd);
-
-		// f2 = |x2-x1|^2
-		double f2;
-		double f2fd[9] = {};
-		double f2sd[9][9] = {};
-		f2 = vertex_vertex_distance_and_derivs(2, 1, x, f2fd, f2sd);
-
-		// combine together
-		double f2sq = f2*f2;
-		double f2cube = f2sq*f2;
-		for (int i = 0; i < 9; i++) {
-			sdd[i] = f1fd[i] + (g*f2fd[i] - f2*g_fd[i]) / f2sq;
-
-			for (int j = 0; j < 9; j++) {
-				double term1 = -2 * g*f2fd[i] * f2fd[j] / f2cube;
-				double term2 = (g_fd[i] * f2fd[j] + g_fd[j] * f2fd[i]) / f2sq;
-				double term3 = f1sd[i][j];
-				double term4 = g*f2sd[i][j] / f2sq;
-				double term5 = -g_sd[i][j] / f2;
-				sdd2[i][j] = term1 + term2 + term3 + term4 + term5;
-			}
-		}
 
 	return sqrDist;
 }
@@ -234,7 +218,6 @@ double vertex_edge_distance_and_derivs_12(double(&x)[12],	// input coords; p0, l
 	int idx1, int idx2, // input indices for points p1 and p2
 	double(&fd)[12],				// output: first derivatives
 	double(&sd)[12][12]) {
-
 
 	double _x[9];
 	_x[0] = x[0];

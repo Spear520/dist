@@ -4,9 +4,19 @@
 #include <iostream>
 #include"point_line.h"
 
+
+// point-triangle derivatives; returns squared distance
+// input: x[12] is the array of coordinates of 4 points p0, p1, p2, p3
+// p0 is the point from which the distance is computed,
+// p1,p2,p3 form the triangle
+// the function returns the squared distance
+// fd is the output array of first derivatives of the squared distance
+// sd is the output array of the second derivatives of the squared distance
+// zeta2 and zeta3 are barycentric coordinates of the closest point on the triangle
+// zeta1 can be obtained as 1-(zeta2+zeta3)
+double pt(double(&x)[12], double(&fd)[12], double(&sd)[12][12], double &zeta2, double &zeta3);
+
 // POINT-PLANE (intended to use in the interior of the triangle)
-bool make_pause = false;
-double dist_side_ratio;
 // second derivatives of a
 double a2[12][12] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -98,69 +108,15 @@ double f2[12][12] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
 
-// helper functions
+// Kronecker delta
+double xd(int idx1, int idx2) { return idx1 == idx2 ? 1. : 0; }
 
-void cross(double x0, double x1, double x2, double x3, double x4, double x5,
-	double &out_v0, double &out_v1, double &out_v2) {
-	out_v0 = -x2 * x4 + x1 * x5;
-	out_v1 = x2 * x3 - x0 * x5;
-	out_v2 = -x1 * x3 + x0 * x4;
-}
-
-void normalize(double &x, double &y, double &z) {
-	double mag = sqrt(x*x + y*y + z*z);
-	x /= mag;
-	y /= mag;
-	z /= mag;
-}
-
-void plane_normal(double x0, double x1, double x2,
-	double x3, double x4, double x5,
-	double x6, double x7, double x8,
-	double &out_v0, double &out_v1, double &out_v2) {
-
-	cross(x3 - x0, x4 - x1, x5 - x2,
-		x6 - x0, x7 - x1, x8 - x2,
-		out_v0, out_v1, out_v2);
-	normalize(out_v0, out_v1, out_v2);
-}
-
-double dot(double x0, double x1, double x2,
-	double x3, double x4, double x5) {
-	return x0*x3 + x1*x4 + x2*x5;
-}
-
-// squared distance between two points
-double vertex_vertex_distance(int idx1, int idx2, double(&x)[12]) {
-
-	int ix0 = idx1 * 3 + 0;
-	int iy0 = idx1 * 3 + 1;
-	int iz0 = idx1 * 3 + 2;
-
-	int ix1 = idx2 * 3 + 0;
-	int iy1 = idx2 * 3 + 1;
-	int iz1 = idx2 * 3 + 2;
-
-	double x0 = x[ix0];
-	double y0 = x[iy0];
-	double z0 = x[iz0];
-
-	double x1 = x[ix1];
-	double y1 = x[iy1];
-	double z1 = x[iz1];
-
-	return (x0 - x1)*(x0 - x1) + (y0 - y1)*(y0 - y1) + (z0 - z1)*(z0 - z1);
-}
-
-// POINT-PLANE universal (automatic selection between degenerate and non-degenerate)
-bool point_plane_approximation_used;
-
-double xd(int idx1, int idx2) {
-	return idx1 == idx2 ? 1. : 0;
-}
-
-double point_plane_distance(double(&x)[12],
-	double(&fd)[12], double(&sd)[12][12])
+// input: x[12] array of p0,p1,p2,p3
+// output: first derivatives of squared distance fd[12]
+// second derivatives of squared distance sd[12][12]
+// return value is the squared distance
+// note: don't call this function directly
+double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12])
 {
 	double output_s, output_t; // for testing
 	double x0 = x[0];
@@ -176,7 +132,12 @@ double point_plane_distance(double(&x)[12],
 	double x10 = x[10];
 	double x11 = x[11];
 
-	double abcdef[6] = { (-x3 + x6)*(-x3 + x6) + (-x4 + x7)*(-x4 + x7) + (-x5 + x8)*(-x5 + x8),(x10 - x4)*(-x4 + x7) + (x11 - x5)*(-x5 + x8) + (-x3 + x6)*(-x3 + x9),(x10 - x4)*(x10 - x4) + (x11 - x5)*(x11 - x5) + (-x3 + x9)*(-x3 + x9),(-x0 + x3)*(-x3 + x6) + (-x1 + x4)*(-x4 + x7) + (-x2 + x5)*(-x5 + x8),(x10 - x4)*(-x1 + x4) + (x11 - x5)*(-x2 + x5) + (-x0 + x3)*(-x3 + x9),(-x0 + x3)*(-x0 + x3) + (-x1 + x4)*(-x1 + x4) + (-x2 + x5)*(-x2 + x5) };
+	double abcdef[6] = { (-x3 + x6)*(-x3 + x6) + (-x4 + x7)*(-x4 + x7) + (-x5 + x8)*(-x5 + x8),
+		(x10 - x4)*(-x4 + x7) + (x11 - x5)*(-x5 + x8) + (-x3 + x6)*(-x3 + x9),
+		(x10 - x4)*(x10 - x4) + (x11 - x5)*(x11 - x5) + (-x3 + x9)*(-x3 + x9),
+		(-x0 + x3)*(-x3 + x6) + (-x1 + x4)*(-x4 + x7) + (-x2 + x5)*(-x5 + x8),
+		(x10 - x4)*(-x1 + x4) + (x11 - x5)*(-x2 + x5) + (-x0 + x3)*(-x3 + x9),
+		(-x0 + x3)*(-x0 + x3) + (-x1 + x4)*(-x1 + x4) + (-x2 + x5)*(-x2 + x5) };
 
 	double a = abcdef[0];
 	double b = abcdef[1];
@@ -205,20 +166,9 @@ double point_plane_distance(double(&x)[12],
 	double dist = sqrt(sqrDistance);
 
 	// select either normal case or degenerate case
-
-	double p12 = sqrt(vertex_vertex_distance(1, 2, x));
-	double p13 = sqrt(vertex_vertex_distance(1, 3, x));
-	double p23 = sqrt(vertex_vertex_distance(2, 3, x));
-	double smallest_side = std::min(std::min(p12, p13), p23);
-	double max_ust = std::max(std::max(u, s), t);
-	bool use_approximation = (dist / smallest_side < 1e-4 && max_ust > 0.999);
-	use_approximation = false;
-
-	dist_side_ratio = dist / smallest_side;
-
+	// u = zeta1; s = zeta2; t = zeta3;
 	double s2[12][12], t2[12][12], det2[12][12];
-
-	double u1[12], u2[12][12]; // experimental/testing
+	double u1[12], u2[12][12];
 
 	// derivatives of s and t
 	// first derivatives of the above quantities
@@ -249,14 +199,7 @@ double point_plane_distance(double(&x)[12],
 				s*xd(8, i) + t*xd(11, i));
 	}
 
-	/*
-	if (use_approximation) {
-		point_plane_approximation_used = true;
-		double fd_[12] = { 2 * (x0 - u*x3 - s*x6 - t*x9),2 * (x1 - t*x10 - u*x4 - s*x7),2 * (-(t*x11) + x2 - u*x5 - s*x8),-2 * u*(x0 - u*x3 - s*x6 - t*x9),-2 * u*(x1 - t*x10 - u*x4 - s*x7),-2 * u*(-(t*x11) + x2 - u*x5 - s*x8),-2 * s*(x0 - u*x3 - s*x6 - t*x9),-2 * s*(x1 - t*x10 - u*x4 - s*x7),-2 * s*(-(t*x11) + x2 - u*x5 - s*x8),-2 * t*(x0 - u*x3 - s*x6 - t*x9),-2 * t*(x1 - t*x10 - u*x4 - s*x7),-2 * t*(-(t*x11) + x2 - u*x5 - s*x8) };
-		for (int i = 0; i < 12; i++) fd[i] = fd_[i];
-	}
-	*/
-
+	// loop may be simplified, because all matrices are symmetric
 	for (int i = 0; i < 12; i++)
 		for (int j = 0; j < 12; j++)
 		{
@@ -300,21 +243,12 @@ double point_plane_distance(double(&x)[12],
 					s1[i] * xd(8, j) + t1[j] * xd(11, i) + t1[i] * xd(11, j)));
 		}
 
-	/*
-	if (make_pause) {
-		std::cout << "*";
-	}
-	*/
 	return sqrDistance;
 }
 
 
-
 // POINT-TRIANGE (ALL CASES COMBINED)
-
-// point-triangle derivatives; returns squared distance
-double pt(double(&x)[12],
-	double(&fd)[12], double(&sd)[12][12], double &output_s, double &output_t, int &branch)
+double pt(double(&x)[12], double(&fd)[12], double(&sd)[12][12], double &zeta2, double &zeta3)
 {
 	double x0 = x[0];
 	double x1 = x[1];
@@ -329,30 +263,16 @@ double pt(double(&x)[12],
 	double x10 = x[10];
 	double x11 = x[11];
 
-	double abcdef[6] = { (-x3 + x6)*(-x3 + x6) + (-x4 + x7)*(-x4 + x7) + (-x5 + x8)*(-x5 + x8),
-		(x10 - x4)*(-x4 + x7) + (x11 - x5)*(-x5 + x8) + (-x3 + x6)*(-x3 + x9),
-		(x10 - x4)*(x10 - x4) + (x11 - x5)*(x11 - x5) + (-x3 + x9)*(-x3 + x9),
-		(-x0 + x3)*(-x3 + x6) + (-x1 + x4)*(-x4 + x7) + (-x2 + x5)*(-x5 + x8),
-		(x10 - x4)*(-x1 + x4) + (x11 - x5)*(-x2 + x5) + (-x0 + x3)*(-x3 + x9),
-		(-x0 + x3)*(-x0 + x3) + (-x1 + x4)*(-x1 + x4) + (-x2 + x5)*(-x2 + x5) };
-
-	double a = abcdef[0];
-	double b = abcdef[1];
-	double c = abcdef[2];
-	double d = abcdef[3];
-	double e = abcdef[4];
-	double f = abcdef[5];
+	double a = (-x3 + x6)*(-x3 + x6) + (-x4 + x7)*(-x4 + x7) + (-x5 + x8)*(-x5 + x8);
+	double b = (x10 - x4)*(-x4 + x7) + (x11 - x5)*(-x5 + x8) + (-x3 + x6)*(-x3 + x9);
+	double c = (x10 - x4)*(x10 - x4) + (x11 - x5)*(x11 - x5) + (-x3 + x9)*(-x3 + x9);
+	double d = (-x0 + x3)*(-x3 + x6) + (-x1 + x4)*(-x4 + x7) + (-x2 + x5)*(-x5 + x8);
+	double e = (x10 - x4)*(-x1 + x4) + (x11 - x5)*(-x2 + x5) + (-x0 + x3)*(-x3 + x9);
 
 	double det = a*c - b*b;
-//	double detsq = det * det;
-//	double detcube = detsq * det;
-
 	double s = b*e - c*d;
 	double t = b*d - a*e;
-
-	branch = -1;
 	double sqrDistance;
-
 
 	if (s + t <= det)
 	{
@@ -365,12 +285,10 @@ double pt(double(&x)[12],
 					t = 0;
 					if (-d >= a)
 					{
-						branch = 1;
 						s = 1;
 						sqrDistance = vertex_vertex_distance_and_derivs_12(0, 2, x, fd, sd);
 					}
 					else {
-						branch = 5;
 						s = -d / a;
 						sqrDistance = vertex_edge_distance_and_derivs_12(x, 2, 1, fd, sd);
 					}
@@ -379,18 +297,15 @@ double pt(double(&x)[12],
 					s = 0;
 					if (e >= 0)
 					{
-						branch = 3;
 						t = 0;
 						sqrDistance = vertex_vertex_distance_and_derivs_12(0, 1, x, fd, sd);
 					}
 					else if (-e >= c)
 					{
-						branch = 2;
 						t = 1;
 						sqrDistance = vertex_vertex_distance_and_derivs_12(0, 3, x, fd, sd);
 					}
 					else {
-						branch = 4;
 						t = -e / c;
 						sqrDistance = vertex_edge_distance_and_derivs_12(x, 3, 1, fd, sd);
 					}
@@ -401,18 +316,15 @@ double pt(double(&x)[12],
 				s = 0;
 				if (e >= 0)
 				{
-					branch = 3;
 					t = 0;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 1, x, fd, sd);
 				}
 				else if (-e >= c)
 				{
-					branch = 2;
 					t = 1;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 3, x, fd, sd);
 				}
 				else {
-					branch = 4;
 					t = -e / c;
 					sqrDistance = vertex_edge_distance_and_derivs_12(x, 3, 1, fd, sd);
 				}
@@ -423,25 +335,21 @@ double pt(double(&x)[12],
 			t = 0;
 			if (d >= 0)
 			{
-				branch = 3;
 				s = 0;
 				sqrDistance = vertex_vertex_distance_and_derivs_12(0, 1, x, fd, sd);
 			}
 			else if (-d >= a)
 			{
-				branch = 1;
 				s = 1;
 				sqrDistance = vertex_vertex_distance_and_derivs_12(0, 2, x, fd, sd);
 			}
 			else {
-				branch = 5;
 				s = -d / a;
 				sqrDistance = vertex_edge_distance_and_derivs_12(x, 1, 2, fd, sd);
 			}
 		}
 		else  // region 0
 		{
-			branch = 0; // interior point
 			double invDet = (1) / det;
 			s *= invDet;
 			t *= invDet;
@@ -458,16 +366,14 @@ double pt(double(&x)[12],
 			if (tmp1 > tmp0)
 			{
 				numer = tmp1 - tmp0;
-				denom = a - 2*b + c;
+				denom = a - 2 * b + c;
 				if (numer >= denom)
 				{
-					branch = 1;
 					s = 1;
 					t = 0;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 2, x, fd, sd);
 				}
 				else {
-					branch = 6;
 					s = numer / denom;
 					t = 1 - s;
 					sqrDistance = vertex_edge_distance_and_derivs_12(x, 2, 3, fd, sd);
@@ -477,18 +383,15 @@ double pt(double(&x)[12],
 				s = 0;
 				if (tmp1 <= 0)
 				{
-					branch = 2;
 					t = 1;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 3, x, fd, sd);
 				}
 				else if (e >= 0)
 				{
-					branch = 3;
 					t = 0;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 1, x, fd, sd);
 				}
 				else {
-					branch = 4;
 					t = -e / c;
 					sqrDistance = vertex_edge_distance_and_derivs_12(x, 1, 3, fd, sd);
 				}
@@ -501,16 +404,14 @@ double pt(double(&x)[12],
 			if (tmp1 > tmp0)
 			{
 				numer = tmp1 - tmp0;
-				denom = a - 2* b + c;
+				denom = a - 2 * b + c;
 				if (numer >= denom)
 				{
-					branch = 2;
 					t = 1;
 					s = 0;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 3, x, fd, sd);
 				}
 				else {
-					branch = 7;
 					t = numer / denom;
 					s = 1 - t;
 					sqrDistance = vertex_edge_distance_and_derivs_12(x, 2, 3, fd, sd);
@@ -520,18 +421,15 @@ double pt(double(&x)[12],
 				t = 0;
 				if (tmp1 <= 0)
 				{
-					branch = 1;
 					s = 1;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 2, x, fd, sd);
 				}
 				else if (d >= 0)
 				{
-					branch = 3;
 					s = 0;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 1, x, fd, sd);
 				}
 				else {
-					branch = 5;
 					s = -d / a;
 					sqrDistance = vertex_edge_distance_and_derivs_12(x, 1, 2, fd, sd);
 				}
@@ -542,7 +440,6 @@ double pt(double(&x)[12],
 			numer = c + e - b - d;
 			if (numer <= 0)
 			{
-				branch = 2;
 				s = 0;
 				t = 1;
 				sqrDistance = vertex_vertex_distance_and_derivs_12(0, 3, x, fd, sd);
@@ -551,13 +448,11 @@ double pt(double(&x)[12],
 				denom = a - 2 * b + c;
 				if (numer >= denom)
 				{
-					branch = 1;
 					s = 1;
 					t = 0;
 					sqrDistance = vertex_vertex_distance_and_derivs_12(0, 2, x, fd, sd);
 				}
 				else {
-					branch = 6;
 					s = numer / denom;
 					t = 1 - s;
 					sqrDistance = vertex_edge_distance_and_derivs_12(x, 2, 3, fd, sd);
@@ -566,11 +461,7 @@ double pt(double(&x)[12],
 		}
 	}
 
-	// testing (remove later)
-	if (branch == -1)  std::cout << "-1 branch" << std::endl;
-	if (sqrDistance < 0) std::cout << "negative distance" << std::endl;
-
-	output_s = s;
-	output_t = t;
+	zeta2 = s;
+	zeta3 = t;
 	return sqrDistance;
 }

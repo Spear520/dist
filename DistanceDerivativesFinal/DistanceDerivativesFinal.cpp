@@ -32,10 +32,9 @@ int main()
 		double fd[12] = {};
 		double sd[12][12] = {};
 		double s, t;
-		int branch;
 
 		// perform the calculation
-		double dsq = pt(x, fd, sd, s, t, branch);
+		double dsq = pt(x, fd, sd, s, t);
 
 		// save to file
 		for (int k = 0; k < 12; k++) file_output << x[k] << ",";

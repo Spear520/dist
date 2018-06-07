@@ -152,7 +152,6 @@
   <ItemGroup>
     <ClInclude Include="point_line.h" />
     <ClInclude Include="point_triangle_distance.h" />
-    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DistanceDerivativesFinal.cpp" />
