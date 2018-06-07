@@ -4,7 +4,6 @@
 #include <iostream>
 #include"point_line.h"
 
-
 // point-triangle derivatives; returns squared distance
 // input: x[12] is the array of coordinates of 4 points p0, p1, p2, p3
 // p0 is the point from which the distance is computed,
@@ -132,19 +131,12 @@ double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12]
 	double x10 = x[10];
 	double x11 = x[11];
 
-	double abcdef[6] = { (-x3 + x6)*(-x3 + x6) + (-x4 + x7)*(-x4 + x7) + (-x5 + x8)*(-x5 + x8),
-		(x10 - x4)*(-x4 + x7) + (x11 - x5)*(-x5 + x8) + (-x3 + x6)*(-x3 + x9),
-		(x10 - x4)*(x10 - x4) + (x11 - x5)*(x11 - x5) + (-x3 + x9)*(-x3 + x9),
-		(-x0 + x3)*(-x3 + x6) + (-x1 + x4)*(-x4 + x7) + (-x2 + x5)*(-x5 + x8),
-		(x10 - x4)*(-x1 + x4) + (x11 - x5)*(-x2 + x5) + (-x0 + x3)*(-x3 + x9),
-		(-x0 + x3)*(-x0 + x3) + (-x1 + x4)*(-x1 + x4) + (-x2 + x5)*(-x2 + x5) };
-
-	double a = abcdef[0];
-	double b = abcdef[1];
-	double c = abcdef[2];
-	double d = abcdef[3];
-	double e = abcdef[4];
-	double f = abcdef[5];
+	double a = (-x3 + x6)*(-x3 + x6) + (-x4 + x7)*(-x4 + x7) + (-x5 + x8)*(-x5 + x8);
+	double b = (x10 - x4)*(-x4 + x7) + (x11 - x5)*(-x5 + x8) + (-x3 + x6)*(-x3 + x9);
+	double c = (x10 - x4)*(x10 - x4) + (x11 - x5)*(x11 - x5) + (-x3 + x9)*(-x3 + x9);
+	double d = (-x0 + x3)*(-x3 + x6) + (-x1 + x4)*(-x4 + x7) + (-x2 + x5)*(-x5 + x8);
+	double e = (x10 - x4)*(-x1 + x4) + (x11 - x5)*(-x2 + x5) + (-x0 + x3)*(-x3 + x9);
+	double f = (-x0 + x3)*(-x0 + x3) + (-x1 + x4)*(-x1 + x4) + (-x2 + x5)*(-x2 + x5);
 
 	double det = a*c - b*b;
 	double detsq = det * det;
@@ -165,7 +157,6 @@ double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12]
 		(-x2 + x8*s + x11*t + x5*u)*(-x2 + x8*s + x11*t + x5*u);
 	double dist = sqrt(sqrDistance);
 
-	// select either normal case or degenerate case
 	// u = zeta1; s = zeta2; t = zeta3;
 	double s2[12][12], t2[12][12], det2[12][12];
 	double u1[12], u2[12][12];
@@ -217,12 +208,13 @@ double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12]
 
 			u2[i][j] = -(s2[i][j] + t2[i][j]);
 
+			// this expression was machine-generated
 			sd[i][j] = 2 * ((x6*s1[i] + x9*t1[i] + x3*u1[i] - xd(0, i) + u*xd(3, i) +
 				s*xd(6, i) + t*xd(9, i))*
 				(x6*s1[j] + x9*t1[j] + x3*u1[j] - xd(0, j) + u*xd(3, j) +
 					s*xd(6, j) + t*xd(9, j)) -
 					(x0 - x6*s - x9*t - x3*u)*
-				(-0 + 0 * s + 0 * t + 0 * u + x6*s2[i][j] + x9*t2[i][j] +
+				(x6*s2[i][j] + x9*t2[i][j] +
 					x3*u2[i][j] + u1[j] * xd(3, i) + u1[i] * xd(3, j) + s1[j] * xd(6, i) +
 					s1[i] * xd(6, j) + t1[j] * xd(9, i) + t1[i] * xd(9, j)) +
 					(x7*s1[i] + x10*t1[i] + x4*u1[i] - xd(1, i) + u*xd(4, i) +
@@ -230,7 +222,7 @@ double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12]
 						(x7*s1[j] + x10*t1[j] + x4*u1[j] - xd(1, j) + u*xd(4, j) +
 							s*xd(7, j) + t*xd(10, j)) -
 							(x1 - x7*s - x10*t - x4*u)*
-				(-0 + 0 * s + 0 * t + 0 * u + x7*s2[i][j] + x10*t2[i][j] +
+				(x7*s2[i][j] + x10*t2[i][j] +
 					x4*u2[i][j] + u1[j] * xd(4, i) + u1[i] * xd(4, j) + s1[j] * xd(7, i) +
 					s1[i] * xd(7, j) + t1[j] * xd(10, i) + t1[i] * xd(10, j)) +
 					(x8*s1[i] + x11*t1[i] + x5*u1[i] - xd(2, i) + u*xd(5, i) +
@@ -238,7 +230,7 @@ double point_plane_distance(double(&x)[12], double(&fd)[12], double(&sd)[12][12]
 						(x8*s1[j] + x11*t1[j] + x5*u1[j] - xd(2, j) + u*xd(5, j) +
 							s*xd(8, j) + t*xd(11, j)) -
 							(x2 - x8*s - x11*t - x5*u)*
-				(-0 + 0 * s + 0 * t + 0 * u + x8*s2[i][j] + x11*t2[i][j] +
+				(x8*s2[i][j] + x11*t2[i][j] +
 					x5*u2[i][j] + u1[j] * xd(5, i) + u1[i] * xd(5, j) + s1[j] * xd(8, i) +
 					s1[i] * xd(8, j) + t1[j] * xd(11, i) + t1[i] * xd(11, j)));
 		}

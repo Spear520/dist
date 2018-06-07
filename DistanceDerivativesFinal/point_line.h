@@ -211,8 +211,6 @@ double vertex_edge_distance_and_derivs(double(&x)[9],	// input coords; p0, line:
 	return sqrDist;
 }
 
-
-
 // version for arrays with 12 elements
 double vertex_edge_distance_and_derivs_12(double(&x)[12],	// input coords; p0, line: (p1, p2)
 	int idx1, int idx2, // input indices for points p1 and p2
