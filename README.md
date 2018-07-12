@@ -1,5 +1,3 @@
-# Project Title
-
 A function that computes gradient and the Hessian of the distance between point and triangle in 3D
 
 ## Getting Started
