@@ -1,3 +1,9 @@
+// This is a reference implementation of point-triangle distance derivatives algorithm.
+// Derivations of the expressions are described in http://www.mdpi.com/1999-4893/11/7/104
+// If this code was useful for research publication or conference talk, please cite as:
+// Gribanov, Igor; Taylor, Rocky; Sarracino, Robert. 2018. "The Gradient and the Hessian of the Distance between Point and Triangle in 3D." Algorithms 11, no. 7: 104.
+
+
 #pragma once
 #include <cmath>
 #include <algorithm>
